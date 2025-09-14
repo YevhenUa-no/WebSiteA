@@ -3,173 +3,559 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futuristic Portfolio</title>
+    <title>3D Snake Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0d0d0d;
-            color: #e0e0e0;
-            overflow-x: hidden;
-            /* New 8-bit inspired background pattern */
-            background-image: linear-gradient(to right, #1a1a1a 1px, transparent 1px), linear-gradient(to bottom, #1a1a1a 1px, transparent 1px);
-            background-size: 16px 16px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Aligns content to the top */
+            height: 100vh;
+            padding-top: 5vh; /* Pushes UI down from the top */
+            color: #10b981;
+            user-select: none;
+            overflow: hidden;
         }
 
-        .glow-text {
-            text-shadow: 0 0 5px #4f46e5, 0 0 10px #4f46e5, 0 0 15px #4f46e5;
+        /* Styles for the Three.js canvas */
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
 
-        .glow-border {
-            border: 1px solid #4f46e5;
-            box-shadow: 0 0 5px #4f46e5, inset 0 0 5px #4f46e5;
+        .ui-container {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
 
-        .fade-in {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        .game-info {
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
         }
 
-        .fade-in.is-visible {
-            opacity: 1;
-            transform: translateY(0);
+        .controls-info {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #64748b;
+            text-align: center;
         }
 
-        @keyframes pulse-glow {
-            0% { box-shadow: 0 0 5px #c084fc; }
-            50% { box-shadow: 0 0 15px #c084fc, 0 0 25px #c084fc; }
-            100% { box-shadow: 0 0 5px #c084fc; }
+        #game-over-message {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 3px solid #ef4444;
+            color: #ef4444;
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 15px #ef4444;
+            text-align: center;
+            z-index: 10;
+            backdrop-filter: blur(10px);
         }
 
-        .pulsing-glow {
-            animation: pulse-glow 2s infinite ease-in-out;
+        #start-button {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #0f172a;
+            padding: 1rem 2.5rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.7);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        #start-button:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 5px 25px rgba(16, 185, 129, 0.9);
+        }
+
+        .title {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .music-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 5;
+        }
+
+        .music-button {
+            background: rgba(16, 185, 129, 0.2);
+            border: 2px solid #10b981;
+            color: #10b981;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            z-index: 5;
+        }
+
+        .music-button:hover {
+            background: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        
+        .control-button {
+            background-color: rgba(16, 185, 129, 0.2);
+            border: 2px solid #10b981;
+            color: #10b981;
+            padding: 1rem;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+            text-shadow: 0 0 5px #10b981;
+            line-height: 1;
+        }
+        
+        .control-button:active {
+            transform: scale(0.95);
+            background-color: rgba(16, 185, 129, 0.4);
+        }
+
+        #controls-container {
+            display: none;
+            z-index: 5;
+        }
+
+        @media (max-width: 768px) {
+            #controls-container {
+                display: block;
+            }
+            .controls-row {
+                display: flex;
+                justify-content: center;
+                gap: 1rem;
+                margin-bottom: 0.5rem;
+            }
         }
     </style>
 </head>
-<body class="bg-black text-gray-200">
+<body>
+    <div class="music-controls">
+        <button class="music-button" onclick="toggleMusic()">🎵 Music</button>
+    </div>
 
-    <!-- Header Section -->
-    <header class="p-8 md:p-12 lg:p-16 flex justify-between items-center z-10 relative">
-        <div class="text-xl md:text-2xl font-bold glow-text">
-            [Your Name]
+    <div class="ui-container">
+        <div class="text-center mb-6">
+            <h1 class="text-4xl md:text-5xl font-extrabold title">3D SNAKE</h1>
+            <p class="text-sm text-gray-400 mt-2">A retro classic in a new dimension!</p>
         </div>
-        <nav class="space-x-4 md:space-x-8">
-            <a href="#about" class="text-sm md:text-base hover:text-white transition-colors duration-300">About</a>
-            <a href="#projects" class="text-sm md:text-base hover:text-white transition-colors duration-300">Projects</a>
-            <a href="#contact" class="text-sm md:text-base hover:text-white transition-colors duration-300">Contact</a>
-        </nav>
-    </header>
-
-    <!-- Main Hero Section -->
-    <main class="min-h-screen flex items-center justify-center p-8 md:p-16 lg:p-24 relative overflow-hidden">
-        <!-- Abstract glowing circle backdrop -->
-        <div class="absolute inset-0 flex items-center justify-center">
-            <div class="w-96 h-96 md:w-[600px] md:h-[600px] lg:w-[800px] lg:h-[800px] rounded-full bg-indigo-900 opacity-20 blur-[100px] pulsing-glow"></div>
+        <div class="game-info">
+            Score: <span id="score">0</span>
         </div>
-
-        <div class="text-center z-10 fade-in">
-            <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 md:mb-6 glow-text">
-                Visionary Designer. <br> Digital Architect.
-            </h1>
-            <p class="text-lg md:text-2xl lg:text-3xl max-w-2xl mx-auto mb-8">
-                Crafting experiences at the intersection of art and technology.
-            </p>
-            <a href="#projects" class="px-6 py-3 md:px-8 md:py-4 bg-indigo-700 text-white rounded-full text-lg font-bold hover:bg-indigo-600 transition-colors duration-300 transform hover:scale-105 pulsing-glow">
-                Explore My Work
-            </a>
+        <div class="controls-info">
+            Use arrow keys or touch controls to move • Collect the red cube to grow
         </div>
-    </main>
-
-    <!-- About Section -->
-    <section id="about" class="py-20 md:py-32 px-8 md:px-16 lg:px-24 fade-in">
-        <div class="max-w-4xl mx-auto text-center">
-            <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-8">About Me</h2>
-            <p class="text-lg leading-relaxed mb-6">
-                Hello, I'm [Your Name], a passionate designer and developer with a love for creating beautiful and functional digital experiences. My work is heavily inspired by sci-fi aesthetics, future tech, and a clean, minimalist approach. I believe that good design should be both innovative and intuitive, pushing boundaries while always keeping the user in mind.
-            </p>
-            <p class="text-lg leading-relaxed">
-                Over the past X years, I've honed my skills in UI/UX design, web development, and interactive art. I'm always eager to learn new technologies and collaborate on projects that challenge me to grow.
-            </p>
+        <div id="game-over-message">
+            <div>GAME OVER!</div>
+            <div style="font-size: 1.2rem; margin-top: 10px;">Final Score: <span id="finalScore">0</span></div>
         </div>
-    </section>
-
-    <!-- Projects Section -->
-    <section id="projects" class="py-20 md:py-32 px-8 md:px-16 lg:px-24">
-        <div class="max-w-6xl mx-auto fade-in">
-            <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-center mb-12">Projects</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Project 1 -->
-                <div class="bg-gray-900 bg-opacity-50 rounded-xl p-6 glow-border hover:bg-opacity-70 transition-colors duration-300 cursor-pointer fade-in">
-                    <img src="https://placehold.co/600x400/1e293b/a1a1aa?text=Project+1" alt="Project 1" class="rounded-lg mb-4">
-                    <h3 class="text-xl md:text-2xl font-bold mb-2">Project Name</h3>
-                    <p class="text-gray-400">A brief description of this project, focusing on the technology and design principles used.</p>
-                </div>
-                <!-- Project 2 -->
-                <div class="bg-gray-900 bg-opacity-50 rounded-xl p-6 glow-border hover:bg-opacity-70 transition-colors duration-300 cursor-pointer fade-in">
-                    <img src="https://placehold.co/600x400/1e293b/a1a1aa?text=Project+2" alt="Project 2" class="rounded-lg mb-4">
-                    <h3 class="text-xl md:text-2xl font-bold mb-2">Project Name</h3>
-                    <p class="text-gray-400">A brief description of this project, focusing on the technology and design principles used.</p>
-                </div>
-                <!-- Project 3 -->
-                <div class="bg-gray-900 bg-opacity-50 rounded-xl p-6 glow-border hover:bg-opacity-70 transition-colors duration-300 cursor-pointer fade-in">
-                    <img src="https://placehold.co/600x400/1e293b/a1a1aa?text=Project+3" alt="Project 3" class="rounded-lg mb-4">
-                    <h3 class="text-xl md:text-2xl font-bold mb-2">Project Name</h3>
-                    <p class="text-gray-400">A brief description of this project, focusing on the technology and design principles used.</p>
-                </div>
+        <button id="start-button">START GAME</button>
+        
+        <div id="controls-container" class="mt-8">
+            <div class="controls-row">
+                <button class="control-button" data-direction="up">▲</button>
+            </div>
+            <div class="controls-row">
+                <button class="control-button" data-direction="left">◀</button>
+                <button class="control-button" data-direction="down">▼</button>
+                <button class="control-button" data-direction="right">▶</button>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- Contact Section -->
-    <section id="contact" class="py-20 md:py-32 px-8 md:px-16 lg:px-24 bg-gray-900 bg-opacity-30">
-        <div class="max-w-4xl mx-auto text-center fade-in">
-            <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-8">Get In Touch</h2>
-            <p class="text-lg leading-relaxed mb-8">
-                Ready to collaborate on a new project or just want to say hello? I'd love to hear from you.
-            </p>
-            <div class="space-y-4 md:space-y-0 md:space-x-4 flex flex-col md:flex-row justify-center items-center">
-                <a href="mailto:your.email@example.com" class="px-6 py-3 md:px-8 md:py-4 bg-purple-700 text-white rounded-full text-lg font-bold hover:bg-purple-600 transition-colors duration-300 transform hover:scale-105">
-                    Email Me
-                </a>
-                <a href="#" target="_blank" class="px-6 py-3 md:px-8 md:py-4 bg-gray-700 text-white rounded-full text-lg font-bold hover:bg-gray-600 transition-colors duration-300 transform hover:scale-105">
-                    LinkedIn
-                </a>
-                <a href="#" target="_blank" class="px-6 py-3 md:px-8 md:py-4 bg-gray-700 text-white rounded-full text-lg font-bold hover:bg-gray-600 transition-colors duration-300 transform hover:scale-105">
-                    GitHub
-                </a>
-            </div>
-        </div>
-    </section>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/"
+          }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
 
-    <!-- Footer -->
-    <footer class="py-8 text-center text-gray-500 text-sm">
-        <p>&copy; 2025 [Your Name]. All rights reserved.</p>
-    </footer>
+        // UI elements
+        const scoreElement = document.getElementById('score');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const finalScoreElement = document.getElementById('finalScore');
+        const startButton = document.getElementById('start-button');
+        const controlsContainer = document.getElementById('controls-container');
+        const musicButton = document.querySelector('.music-button');
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Intersection Observer for fade-in effect on scroll
-            const observerOptions = {
-                root: null,
-                rootMargin: '0px',
-                threshold: 0.2
-            };
+        // Game state variables
+        const gridSize = 15;
+        const cubeSize = 1;
+        let snake = [];
+        let snakeMeshes = [];
+        let foodPosition = new THREE.Vector3();
+        let foodMesh;
+        let direction = new THREE.Vector3(1, 0, 0);
+        let score = 0;
+        let isGameOver = true;
+        let changingDirection = false;
+        const gameTick = 150;
+        let lastUpdateTime = 0;
+        let gameLoop;
+        
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let musicEnabled = true;
 
-            const observer = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('is-visible');
-                        observer.unobserve(entry.target);
+        // Audio components
+        let pointSynth, buzzSynth, mainSynth;
+        let mainLoop;
+        const song = {
+            notes: ["E5", "B4", "C5", "D5", "C5", "B4", "A4", "A4", "C5", "E5", "D5", "C5", "B4"],
+            tempo: 120
+        };
+
+        // THREE.js setup
+        let scene, camera, renderer;
+
+        function init3DScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0); // Transparent background
+            document.body.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 10, 7.5);
+            scene.add(directionalLight);
+
+            // Grid helper
+            const gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x10b981, 0x334155);
+            scene.add(gridHelper);
+
+            // Camera setup
+            camera.position.set(0, gridSize + 5, gridSize);
+            camera.lookAt(0, 0, 0);
+
+            // Food
+            const foodGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+            const foodMaterial = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.5, roughness: 0.5 });
+            foodMesh = new THREE.Mesh(foodGeometry, foodMaterial);
+            scene.add(foodMesh);
+            placeFood();
+
+            // Set up event listeners
+            document.addEventListener('keydown', handleKeyPress);
+            document.addEventListener('touchstart', handleTouchStart, false);
+            document.addEventListener('touchmove', handleTouchMove, false);
+            controlsContainer.addEventListener('click', handleButtonPress);
+            window.addEventListener('resize', handleResize);
+        }
+
+        function setupAudio() {
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+            }
+
+            mainSynth = new Tone.Synth({
+                oscillator: { type: "square8" },
+                envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 0.8 }
+            }).chain(new Tone.Filter(800, "lowpass"), new Tone.Volume(-10), Tone.Destination);
+
+            pointSynth = new Tone.Synth({
+                oscillator: { type: "triangle8" },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.05, release: 0.1 }
+            }).chain(new Tone.Volume(-8), Tone.Destination);
+
+            buzzSynth = new Tone.Synth({
+                oscillator: { type: "sawtooth4" },
+                envelope: { attack: 0.01, decay: 1.5, sustain: 0, release: 0.1 }
+            }).chain(new Tone.Volume(-12), Tone.Destination);
+
+            playCurrentSong();
+        }
+
+        function playCurrentSong() {
+            if (!musicEnabled || isGameOver) return;
+            if (mainLoop) mainLoop.dispose();
+
+            Tone.Transport.bpm.value = song.tempo;
+            mainLoop = new Tone.Sequence((time, note) => {
+                if (note && musicEnabled) {
+                    mainSynth.triggerAttackRelease(note, "8n", time);
+                }
+            }, song.notes, "8n").start(0);
+        }
+
+        function toggleMusic() {
+            musicEnabled = !musicEnabled;
+            musicButton.textContent = musicEnabled ? '🎵 Music' : '🔇 Muted';
+            if (musicEnabled) {
+                if (Tone.context.state === 'suspended') { Tone.start(); }
+                if (Tone.Transport.state === 'stopped') { Tone.Transport.start(); }
+                playCurrentSong();
+            } else {
+                if (mainLoop) mainLoop.dispose();
+                Tone.Transport.stop();
+            }
+        }
+
+        function startGame() {
+            isGameOver = false;
+            gameOverMessage.style.display = 'none';
+            startButton.style.display = 'none';
+
+            // Reset game state
+            score = 0;
+            scoreElement.textContent = score;
+            snake.forEach(mesh => scene.remove(mesh));
+            snakeMeshes = [];
+            
+            snake = [{ x: 0, y: 0, z: 0 }];
+            direction = new THREE.Vector3(1, 0, 0);
+
+            // Create initial snake mesh
+            createSnakeMesh(snake[0].x, snake[0].y, snake[0].z);
+
+            placeFood();
+            setupAudio();
+            Tone.Transport.start();
+
+            if (!gameLoop) {
+                gameLoop = window.requestAnimationFrame(animate);
+            }
+        }
+
+        function endGame() {
+            isGameOver = true;
+            cancelAnimationFrame(gameLoop);
+
+            finalScoreElement.textContent = score;
+            gameOverMessage.style.display = 'block';
+            startButton.style.display = 'block';
+            startButton.textContent = 'PLAY AGAIN';
+
+            Tone.Transport.stop();
+            if (mainLoop) mainLoop.dispose();
+            buzzSynth.triggerAttackRelease("C2", "1n");
+        }
+        
+        function createSnakeMesh(x, y, z) {
+            const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+            const material = new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.3, roughness: 0.7 });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y, z);
+            snakeMeshes.push(mesh);
+            scene.add(mesh);
+        }
+        
+        function placeFood() {
+            const range = Math.floor(gridSize / 2);
+            foodPosition.x = Math.round((Math.random() * range * 2) - range);
+            foodPosition.z = Math.round((Math.random() * range * 2) - range);
+            
+            // Ensure food doesn't spawn on the snake
+            for (let segment of snake) {
+                if (segment.x === foodPosition.x && segment.z === foodPosition.z) {
+                    placeFood();
+                    return;
+                }
+            }
+
+            foodMesh.position.set(foodPosition.x, cubeSize / 2, foodPosition.z);
+        }
+
+        function checkSelfCollision(head) {
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.z === snake[i].z) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function animate(currentTime) {
+            if (isGameOver) return;
+            gameLoop = requestAnimationFrame(animate);
+
+            if (currentTime - lastUpdateTime > gameTick) {
+                lastUpdateTime = currentTime;
+                
+                // Move snake
+                const newHead = {
+                    x: snake[0].x + direction.x,
+                    y: snake[0].y,
+                    z: snake[0].z + direction.z
+                };
+                
+                // Implement wraparound logic for "4 squares beyond borders"
+                const border = Math.floor(gridSize / 2);
+                const wrapDistance = 4;
+                
+                if (newHead.x > border + wrapDistance) newHead.x = -(border + wrapDistance);
+                else if (newHead.x < -(border + wrapDistance)) newHead.x = border + wrapDistance;
+
+                if (newHead.z > border + wrapDistance) newHead.z = -(border + wrapDistance);
+                else if (newHead.z < -(border + wrapDistance)) newHead.z = border + wrapDistance;
+                
+                snake.unshift(newHead);
+                
+                // Check for food
+                const head = snake[0];
+                if (head.x === foodPosition.x && head.z === foodPosition.z) {
+                    score++;
+                    scoreElement.textContent = score;
+                    pointSynth.triggerAttackRelease("C5", "16n");
+                    placeFood();
+                    // Add new snake mesh
+                    createSnakeMesh(head.x, head.y, head.z);
+                } else {
+                    snake.pop();
+                }
+
+                if (checkSelfCollision(head)) {
+                    endGame();
+                    return;
+                }
+                
+                // Update snake meshes
+                for (let i = 0; i < snake.length; i++) {
+                    if (snakeMeshes[i]) {
+                        snakeMeshes[i].position.set(snake[i].x, cubeSize / 2, snake[i].z);
                     }
-                });
-            }, observerOptions);
+                }
+                
+                changingDirection = false;
+            }
+            
+            renderer.render(scene, camera);
+        }
 
-            document.querySelectorAll('.fade-in').forEach(element => {
-                observer.observe(element);
-            });
-        });
+        function handleKeyPress(e) {
+            if (isGameOver || changingDirection) return;
+            changingDirection = true;
+            
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                    if (direction.z === 0) direction.set(0, 0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    if (direction.z === 0) direction.set(0, 0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                    if (direction.x === 0) direction.set(-1, 0, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                    if (direction.x === 0) direction.set(1, 0, 0);
+                    break;
+            }
+        }
+        
+        function handleTouchStart(e) {
+            if (isGameOver) return;
+            e.preventDefault();
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }
+
+        function handleTouchMove(e) {
+            if (isGameOver || e.touches.length === 0 || changingDirection) return;
+            e.preventDefault();
+
+            const dx = e.touches[0].clientX - touchStartX;
+            const dy = e.touches[0].clientY - touchStartY;
+            const sensitivity = 20;
+
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > sensitivity) {
+                if (dx > 0 && direction.x === 0) { direction.set(1, 0, 0); changingDirection = true; }
+                else if (dx < 0 && direction.x === 0) { direction.set(-1, 0, 0); changingDirection = true; }
+            } else if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > sensitivity) {
+                if (dy > 0 && direction.z === 0) { direction.set(0, 0, 1); changingDirection = true; }
+                else if (dy < 0 && direction.z === 0) { direction.set(0, 0, -1); changingDirection = true; }
+            }
+        }
+        
+        function handleButtonPress(e) {
+            if (isGameOver || changingDirection) return;
+            changingDirection = true;
+            
+            const button = e.target.closest('.control-button');
+            if (!button) return;
+
+            const directionValue = button.getAttribute('data-direction');
+
+            switch (directionValue) {
+                case 'up':
+                    if (direction.z === 0) direction.set(0, 0, -1);
+                    break;
+                case 'down':
+                    if (direction.z === 0) direction.set(0, 0, 1);
+                    break;
+                case 'left':
+                    if (direction.x === 0) direction.set(-1, 0, 0);
+                    break;
+                case 'right':
+                    if (direction.x === 0) direction.set(1, 0, 0);
+                    break;
+            }
+        }
+
+        function handleResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Initialize on window load
+        window.onload = () => {
+            init3DScene();
+            startButton.addEventListener('click', startGame);
+        };
     </script>
 </body>
 </html>
